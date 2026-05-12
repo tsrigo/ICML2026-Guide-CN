@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+_raw_*.json
+*.log
+nohup.out
