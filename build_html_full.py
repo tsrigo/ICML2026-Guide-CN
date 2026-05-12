@@ -556,14 +556,14 @@ def build():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ICML 2026 论文集 · 中文导读（{total} 篇）</title>
+<title>ICML 2026 论文 · 中文导读（{total} 篇）</title>
 <style>{CSS}</style>
 </head>
 <body>
 <div class="container">
   <aside class="sidebar">
     <div class="group-logo"><img src="logo.png" alt="Reasoning and Learning Research Group"></div>
-    <h1>📚 ICML 2026<br>全部论文中文导读</h1>
+    <h1>ICML 2026 论文 · 中文导读</h1>
     <div class="sub">{total} 篇 · {n_pri} 个大类 · {n_sub_total} 个细分 · {n_subsub_total} 个三级</div>
     <input type="search" id="search" placeholder="🔍 搜索标题 / 作者…">
     <div class="stat-grid">
@@ -583,7 +583,7 @@ def build():
   </aside>
   <main class="main">
     <div class="main-header">
-      <h1>ICML 2026 全部接收论文 · 中文导读</h1>
+      <h1>ICML 2026 论文 · 中文导读</h1>
       <p>从 ICML 官方虚拟会议站拉取 <b>{total}</b> 篇接收论文，按 <b>{n_pri} 一级 · {n_sub_total} 二级 · {n_subsub_total} 三级</b> 整理。每篇给出"研究动机 / 解决问题 / 现象分析 / 主要方法 / 数据集与实验 / 主要贡献"六个维度的中文分析。中文由 LLM 基于英文 abstract 自动生成，仅供快速浏览，建议结合原文。左侧导航点大类标题展开/收起。</p>
       <div class="tier-summary">
         <span class="tier-chip all active" data-tier="__all__">📚 全部 {total} 篇</span>
