@@ -70,6 +70,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .sidebar .group-logo img{display:block;width:100%;height:auto}
 .sidebar h1{font-size:18px;margin-bottom:6px;color:#0366d6;line-height:1.3;font-weight:700}
 .sidebar .sub{font-size:12px;color:#6a737d;margin-bottom:16px}
+.sister-site{margin-bottom:14px}
+.sister-site a{display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,#e7f3ff,#fff4f4);color:#0366d6;text-decoration:none;font-size:12px;font-weight:500;border-radius:6px;border:1px solid #d1e5fa;transition:all .15s}
+.sister-site a:hover{background:linear-gradient(135deg,#d1e7ff,#ffe0e0);transform:translateY(-1px);box-shadow:0 2px 8px rgba(3,102,214,.15);border-color:#0366d6}
+.sister-site .arrow{margin-left:auto;color:#0366d6;opacity:.6}
 .sidebar input[type=search]{width:100%;padding:9px 12px;border:1px solid #d1d5da;border-radius:6px;margin-bottom:14px;font-size:13px;outline:none}
 .sidebar input[type=search]:focus{border-color:#0366d6;box-shadow:0 0 0 2px rgba(3,102,214,.2)}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px}
@@ -565,6 +569,12 @@ def build():
     <div class="group-logo"><img src="logo.png" alt="Reasoning and Learning Research Group"></div>
     <h1>ICML 2026 论文 · 中文导读</h1>
     <div class="sub">{total} 篇 · {n_pri} 个大类 · {n_sub_total} 个细分 · {n_subsub_total} 个三级</div>
+    <div class="sister-site">
+      <a href="https://jenniferzhao0531.github.io/ICLR2026-Guide-CN/" target="_blank">
+        🔗 姊妹站：ICLR 2026 论文 · 中文导读
+        <span class="arrow">→</span>
+      </a>
+    </div>
     <input type="search" id="search" placeholder="🔍 搜索标题 / 作者…">
     <div class="stat-grid">
       <div class="stat-box"><b>{total}</b>论文总数</div>
