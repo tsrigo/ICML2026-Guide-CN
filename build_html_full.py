@@ -66,6 +66,8 @@ CSS = """
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f6f8fa;color:#24292e;line-height:1.7}
 .container{display:flex;min-height:100vh}
 .sidebar{width:340px;background:#fff;border-right:1px solid #e1e4e8;padding:24px 18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar .group-logo{display:block;width:100%;max-width:280px;margin:0 auto 14px;padding-bottom:14px;border-bottom:1px solid #eaecef}
+.sidebar .group-logo img{display:block;width:100%;height:auto}
 .sidebar h1{font-size:18px;margin-bottom:6px;color:#0366d6;line-height:1.3;font-weight:700}
 .sidebar .sub{font-size:12px;color:#6a737d;margin-bottom:16px}
 .sidebar input[type=search]{width:100%;padding:9px 12px;border:1px solid #d1d5da;border-radius:6px;margin-bottom:14px;font-size:13px;outline:none}
@@ -560,6 +562,7 @@ def build():
 <body>
 <div class="container">
   <aside class="sidebar">
+    <div class="group-logo"><img src="logo.png" alt="Reasoning and Learning Research Group"></div>
     <h1>📚 ICML 2026<br>全部论文中文导读</h1>
     <div class="sub">{total} 篇 · {n_pri} 个大类 · {n_sub_total} 个细分 · {n_subsub_total} 个三级</div>
     <input type="search" id="search" placeholder="🔍 搜索标题 / 作者…">
