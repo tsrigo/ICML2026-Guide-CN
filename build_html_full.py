@@ -27,7 +27,7 @@ OUTPUT_HTML     = "index.html"
 # GoatCounter 访问统计（隐私友好、无 cookie）。
 # 想换成你自己的：去 https://www.goatcounter.com 免费注册，把下面这个 URL 改成
 # 你的 <子域>.goatcounter.com，置空字符串则不启用统计。
-GOATCOUNTER_URL = "https://jenniferzhao0531.goatcounter.com"
+GOATCOUNTER_URL = "https://icml2026-cn.goatcounter.com"
 
 # 六维度
 DIM_LABELS = [
