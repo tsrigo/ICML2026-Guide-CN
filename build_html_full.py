@@ -584,7 +584,7 @@ def build():
   <main class="main">
     <div class="main-header">
       <h1>ICML 2026 论文 · 中文导读</h1>
-      <p>从 ICML 官方虚拟会议站拉取 <b>{total}</b> 篇接收论文，按 <b>{n_pri} 一级 · {n_sub_total} 二级 · {n_subsub_total} 三级</b> 整理。每篇给出"研究动机 / 解决问题 / 现象分析 / 主要方法 / 数据集与实验 / 主要贡献"六个维度的中文分析。中文由 LLM 基于英文 abstract 自动生成，仅供快速浏览，建议结合原文。左侧导航点大类标题展开/收起。</p>
+      <p>从 ICML 官方会议站拉取 <b>{total}</b> 篇接收论文，按 <b>{n_pri} 一级 · {n_sub_total} 二级 · {n_subsub_total} 三级</b> 整理。每篇给出"研究动机 / 解决问题 / 现象分析 / 主要方法 / 数据集与实验 / 主要贡献"六个维度的中文分析。中文由 LLM 基于英文 abstract 自动生成，仅供快速浏览，建议结合原文。左侧导航点大类标题展开/收起。</p>
       <div class="tier-summary">
         <span class="tier-chip all active" data-tier="__all__">📚 全部 {total} 篇</span>
         {f'<span class="tier-chip Oral" data-tier="Oral">🎤 Oral {n_oral} 篇</span>' if n_oral > 0 else ''}
