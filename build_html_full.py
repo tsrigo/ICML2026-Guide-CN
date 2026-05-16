@@ -130,6 +130,7 @@ h4.subsub-title small{font-size:11.5px;color:#6a737d;font-weight:400;margin-left
 .paper:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .paper.tier-Oral{border-left:4px solid #d4a017;background:linear-gradient(to right, #fffaeb 0, #fff 80px)}
 .paper.tier-Spotlight{border-left:4px solid #d4a017;background:linear-gradient(to right, #fffaeb 0, #fff 80px)}
+.paper-list{min-height:1px}
 .tier-badge{display:inline-block;font-weight:700;font-size:11px;padding:2px 9px;border-radius:10px;margin-right:6px;letter-spacing:.3px;vertical-align:middle}
 .tier-badge.Oral{background:#fff4d4;color:#8a6500;border:1px solid #d4a017}
 .tier-badge.Spotlight{background:#fff4d4;color:#8a6500;border:1px solid #d4a017}
@@ -142,13 +143,19 @@ h4.subsub-title small{font-size:11.5px;color:#6a737d;font-weight:400;margin-left
 .tier-chip.Oral.active{background:#d4a017;color:#fff}
 .tier-chip.Spotlight{background:#fff4d4;color:#8a6500;border-color:#d4a017}
 .tier-chip.Spotlight.active{background:#d4a017;color:#fff}
+.tier-chip.favorite{background:#f6f8fa;color:#586069;border-color:#d1d5da}
+.tier-chip.favorite.active{background:#24292e;color:#fff;border-color:#24292e}
 .tier-chip:hover{transform:translateY(-1px)}
 
-.paper-title{font-size:16px;font-weight:600;color:#24292e;margin-bottom:8px;line-height:1.45}
+.paper-title{font-size:16px;font-weight:600;color:#24292e;margin-bottom:8px;line-height:1.45;padding-right:38px}
 .paper-title a{color:inherit;text-decoration:none}
 .paper-title a:hover{color:#0366d6;text-decoration:underline}
 .paper-title .sidelink{margin-left:8px;color:#6a737d;font-size:11.5px;font-weight:500;text-decoration:none;background:#f1f3f5;padding:2px 8px;border-radius:10px;vertical-align:middle}
 .paper-title .sidelink:hover{background:#e7f3ff;color:#0366d6}
+.favorite-btn{position:absolute;top:14px;right:16px;width:28px;height:28px;border:0;background:transparent;color:#c1c7cf;font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:color .15s,background .15s,transform .15s}
+.favorite-btn:hover{background:#fffbea;color:#d4a017;transform:scale(1.08)}
+.favorite-btn.active{color:#d4a017}
+.favorite-btn:focus{outline:2px solid #5b8def;outline-offset:2px}
 .paper-meta{font-size:12px;color:#586069;margin-bottom:10px}
 .paper-meta .badge{display:inline-block;background:#e7f3ff;color:#0366d6;padding:2px 8px;border-radius:10px;margin-right:5px;font-size:11px;font-weight:500}
 .paper-meta .badge.sub{background:#eaecef;color:#24292e}
@@ -172,6 +179,10 @@ h4.subsub-title small{font-size:11.5px;color:#6a737d;font-weight:400;margin-left
 .hidden{display:none !important}
 .empty{text-align:center;color:#959da5;padding:40px;font-size:14px}
 .no-cn{font-style:italic;color:#959da5}
+.section-more{display:flex;align-items:center;justify-content:center;margin:4px 0 18px}
+.section-more button{border:1px solid #d1d5da;background:#fff;color:#0366d6;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.section-more button:hover{background:#e7f3ff;border-color:#0366d6}
+.render-status{font-size:12px;color:#6a737d;margin:12px 0 0}
 
 /* 回到顶部浮动按钮 */
 #back-to-top{position:fixed;bottom:32px;right:32px;width:48px;height:48px;border-radius:50%;background:#0366d6;color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 12px rgba(3,102,214,.35);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transform:translateY(8px);transition:all .25s ease;z-index:1000;line-height:1}
@@ -190,14 +201,293 @@ h4.subsub-title small{font-size:11.5px;color:#6a737d;font-weight:400;margin-left
 
 
 JS = """
+const PAPER_DATA = JSON.parse(document.getElementById('paper-data').textContent);
+const DIM_LABELS = [
+  ['研究动机', '🎯 研究动机'],
+  ['解决问题', '❓ 解决问题'],
+  ['现象分析', '🔍 现象分析'],
+  ['主要方法', '🛠️ 主要方法'],
+  ['数据集与实验', '📊 数据与实验'],
+  ['主要贡献', '⭐ 主要贡献'],
+];
+const INITIAL_PER_SECTION = 24;
+const BATCH_PER_SECTION = 24;
+const FAVORITE_KEY = 'icml2026-guide-cn:favorites:v1';
+
 const search=document.getElementById('search');
-const papers=document.querySelectorAll('.paper');
-const subsubSecs=document.querySelectorAll('section.subsub-sec');
-const subSecs=document.querySelectorAll('section.sub-sec');
-const priSecs=document.querySelectorAll('section.pri-sec');
-const tierChips=document.querySelectorAll('.tier-chip');
+const subsubSecs=Array.from(document.querySelectorAll('section.subsub-sec'));
+const subSecs=Array.from(document.querySelectorAll('section.sub-sec'));
+const priSecs=Array.from(document.querySelectorAll('section.pri-sec'));
+const tierChips=Array.from(document.querySelectorAll('.tier-chip'));
+const paperLists=new Map(Array.from(document.querySelectorAll('.paper-list')).map(el=>[el.dataset.section, el]));
+const navSubsubLinks=new Map(Array.from(document.querySelectorAll('.nav-subsub-list a')).map(a=>[(a.getAttribute('href')||'').slice(1), a]));
+const emptyState=document.getElementById('empty-state');
+const renderStatus=document.getElementById('render-status');
 
 let activeTier='__all__';
+let filteredBySection=new Map();
+
+function loadFavorites(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(FAVORITE_KEY)||'[]');
+    return new Set(Array.isArray(raw) ? raw.map(String) : []);
+  }catch(_){
+    return new Set();
+  }
+}
+let favorites=loadFavorites();
+
+function saveFavorites(){
+  try{
+    localStorage.setItem(FAVORITE_KEY, JSON.stringify(Array.from(favorites)));
+  }catch(_){}
+}
+
+function updateFavoriteCount(){
+  const el=document.getElementById('favorite-count');
+  if(el) el.textContent=favorites.size;
+}
+
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+function safeURL(value){
+  if(!value) return '';
+  try{
+    const url=new URL(value, window.location.href);
+    return (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : '';
+  }catch(_){
+    return '';
+  }
+}
+
+function inc(map, key, delta=1){
+  map.set(key, (map.get(key)||0)+delta);
+}
+
+function authorsText(authors){
+  const list=Array.isArray(authors) ? authors : [];
+  if(!list.length) return '';
+  let shown=list.slice(0, 8).join('、');
+  if(list.length > 8) shown += ` 等 ${list.length} 人`;
+  return shown;
+}
+
+function buildPaperCard(p){
+  const article=document.createElement('article');
+  const tier=(p.tier||'Poster').trim();
+  article.className=`paper tier-${tier.replace(/[^A-Za-z0-9_-]/g,'') || 'Poster'}`;
+  article.dataset.search=p.search||'';
+  article.dataset.tier=tier;
+  article.dataset.id=p.id;
+
+  const titleHref='https://scholar.google.com/scholar?q=' + encodeURIComponent(p.title||'');
+  const sideLinks=[];
+  const openreview=safeURL(p.paper_url);
+  const icml=safeURL(p.url);
+  if(openreview) sideLinks.push(`<a class="sidelink" href="${escapeHTML(openreview)}" target="_blank" rel="noopener">📝 OpenReview</a>`);
+  if(icml) sideLinks.push(`<a class="sidelink" href="${escapeHTML(icml)}" target="_blank" rel="noopener">🌐 ICML</a>`);
+
+  let tierBadge='';
+  if(tier === 'Oral') tierBadge='<span class="tier-badge Oral">🎤 Oral</span>';
+  if(tier === 'Spotlight') tierBadge='<span class="tier-badge Spotlight">⭐ Spotlight</span>';
+
+  const authors=authorsText(p.authors);
+  const authorsHtml=authors ? `<div class="authors">👤 ${escapeHTML(authors)}</div>` : '';
+  const subsubHtml=p.subcategory ? `<span class="badge subsub">${escapeHTML(p.subcategory)}</span>` : '';
+  const analysis=p.analysis || {};
+  const hasAnalysis=Object.keys(analysis).length > 0;
+  const dimsHtml=hasAnalysis
+    ? DIM_LABELS.map(([key,label]) => (
+        `<div class="dim"><span class="dim-label">${label}</span><div class="dim-content">${escapeHTML(analysis[key]||'')}</div></div>`
+      )).join('')
+    : '<div class="dim no-cn">（中文六维度分析尚未生成）</div>';
+
+  const isFavorite=favorites.has(String(p.id));
+  article.innerHTML=`
+    <button class="favorite-btn${isFavorite ? ' active' : ''}" type="button" data-id="${escapeHTML(p.id)}" aria-pressed="${isFavorite ? 'true' : 'false'}" aria-label="${isFavorite ? '取消收藏' : '收藏'}" title="${isFavorite ? '取消收藏' : '收藏'}">★</button>
+    <div class="paper-title">${tierBadge}<a href="${escapeHTML(titleHref)}" target="_blank" rel="noopener">${escapeHTML(p.title)}</a>${sideLinks.join('')}</div>
+    <div class="paper-meta">
+      ${p.primary_area ? `<span class="badge">${escapeHTML(p.primary_area)}</span>` : ''}
+      ${p.category ? `<span class="badge sub">${escapeHTML(p.category)}</span>` : ''}
+      ${subsubHtml}
+      ${authorsHtml}
+    </div>
+    ${dimsHtml}
+    <span class="toggle-abs">查看完整摘要 (Abstract)</span>
+    <div class="full-abs">${escapeHTML(p.abstract || '')}</div>
+  `;
+  article.querySelector('.toggle-abs').addEventListener('click', ()=>{
+    article.classList.toggle('expanded');
+  });
+  article.querySelector('.favorite-btn').addEventListener('click', e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(String(p.id));
+  });
+  return article;
+}
+
+function refreshFavoriteButtons(id){
+  document.querySelectorAll('.favorite-btn').forEach(btn=>{
+    if(btn.dataset.id !== id) return;
+    const active=favorites.has(id);
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.setAttribute('aria-label', active ? '取消收藏' : '收藏');
+    btn.setAttribute('title', active ? '取消收藏' : '收藏');
+  });
+}
+
+function toggleFavorite(id){
+  if(favorites.has(id)) favorites.delete(id);
+  else favorites.add(id);
+  saveFavorites();
+  updateFavoriteCount();
+  refreshFavoriteButtons(id);
+  if(activeTier === '__favorites__') applyFilters();
+}
+
+function paperMatches(p, q){
+  const matchSearch=!q || (p.search||'').includes(q);
+  const matchTier=activeTier === '__all__'
+    || (activeTier === '__favorites__' ? favorites.has(String(p.id)) : (p.tier||'Poster') === activeTier);
+  return matchSearch && matchTier;
+}
+
+function buildFilteredState(){
+  const q=(search.value||'').trim().toLowerCase();
+  const filtering=Boolean(q || activeTier !== '__all__');
+  const priCounts=new Map();
+  const subCounts=new Map();
+  const sectionCounts=new Map();
+  const bySection=new Map();
+  let total=0;
+
+  PAPER_DATA.forEach(p=>{
+    if(!paperMatches(p, q)) return;
+    total += 1;
+    inc(priCounts, p.pri_anchor);
+    inc(subCounts, p.sub_anchor);
+    inc(sectionCounts, p.section_anchor);
+    if(!bySection.has(p.section_anchor)) bySection.set(p.section_anchor, []);
+    bySection.get(p.section_anchor).push(p);
+  });
+
+  filteredBySection=bySection;
+  return {priCounts, subCounts, sectionCounts, filtering, total};
+}
+
+function clearRenderedPapers(){
+  paperLists.forEach(list=>{
+    list.textContent='';
+    list.dataset.rendered='0';
+  });
+}
+
+function renderSection(sectionId, amount=INITIAL_PER_SECTION){
+  const list=paperLists.get(sectionId);
+  if(!list || list.closest('.hidden')) return;
+  const papers=filteredBySection.get(sectionId) || [];
+  const oldMore=Array.from(list.children).find(el=>el.classList.contains('section-more'));
+  if(oldMore) oldMore.remove();
+
+  const rendered=Number(list.dataset.rendered || 0);
+  const next=Math.min(rendered + amount, papers.length);
+  if(next <= rendered) return;
+
+  const frag=document.createDocumentFragment();
+  for(let i=rendered; i<next; i++){
+    frag.appendChild(buildPaperCard(papers[i]));
+  }
+  list.appendChild(frag);
+  list.dataset.rendered=String(next);
+
+  if(next < papers.length){
+    const more=document.createElement('div');
+    more.className='section-more';
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent=`加载更多（剩余 ${papers.length - next} 篇）`;
+    btn.addEventListener('click', ()=>renderSection(sectionId, BATCH_PER_SECTION));
+    more.appendChild(btn);
+    list.appendChild(more);
+  }
+}
+
+function renderNearViewport(){
+  let rendered=false;
+  paperLists.forEach(list=>{
+    if(rendered || list.closest('.hidden')) return;
+    const rect=list.getBoundingClientRect();
+    if(rect.top < window.innerHeight + 900 && rect.bottom > -400){
+      renderSection(list.dataset.section, INITIAL_PER_SECTION);
+      rendered=true;
+    }
+  });
+  if(!rendered){
+    const first=Array.from(paperLists.values()).find(list=>!list.closest('.hidden'));
+    if(first) renderSection(first.dataset.section, INITIAL_PER_SECTION);
+  }
+}
+
+function updateNavAndSections(state){
+  const {priCounts, subCounts, sectionCounts, filtering, total}=state;
+
+  subsubSecs.forEach(s=>{
+    const visible=sectionCounts.get(s.id)||0;
+    s.classList.toggle('hidden', visible===0);
+    const link=navSubsubLinks.get(s.id);
+    if(link){
+      const cnt=link.querySelector('.count');
+      if(cnt) cnt.textContent='('+visible+')';
+      link.classList.toggle('hidden', visible===0);
+    }
+  });
+
+  subSecs.forEach(s=>{
+    const visible=subCounts.get(s.id)||0;
+    s.classList.toggle('hidden', visible===0);
+    const navSub=document.getElementById('nav-'+s.id);
+    if(navSub){
+      const cnt=navSub.querySelector('.count');
+      if(cnt) cnt.textContent= navSub.classList.contains('nav-thin') ? '('+visible+')' : visible;
+      navSub.classList.toggle('hidden', visible===0);
+      if(filtering && visible>0 && navSub.classList.contains('nav-sub')) navSub.classList.add('expanded');
+      if(!filtering && navSub.classList.contains('nav-sub')) navSub.classList.remove('expanded');
+    }
+  });
+
+  priSecs.forEach(s=>{
+    const visible=priCounts.get(s.id)||0;
+    s.classList.toggle('hidden', visible===0);
+    const prinav=document.getElementById('nav-'+s.id);
+    if(prinav){
+      const cnt=prinav.querySelector('.nav-pri-head .count');
+      if(cnt) cnt.textContent=visible;
+      prinav.classList.toggle('hidden', visible===0);
+      if(filtering && visible>0) prinav.classList.add('expanded');
+      if(!filtering) prinav.classList.remove('expanded');
+    }
+  });
+
+  if(emptyState) emptyState.classList.toggle('hidden', total !== 0);
+  if(renderStatus){
+    renderStatus.textContent = total
+      ? `当前匹配 ${total} 篇；论文卡片会随滚动按需加载。`
+      : '没有匹配的论文。';
+  }
+}
+
+function applyFilters(){
+  const state=buildFilteredState();
+  clearRenderedPapers();
+  updateNavAndSections(state);
+  requestAnimationFrame(renderNearViewport);
+}
 
 // L1 折叠：点击大类头部展开/收起 L2 列表
 document.querySelectorAll('.nav-pri-head').forEach(h=>{
@@ -215,60 +505,12 @@ document.querySelectorAll('.nav-sub-head').forEach(h=>{
   });
 });
 
-function applyFilters(){
-  const q=(search.value||'').trim().toLowerCase();
-  papers.forEach(p=>{
-    const t=p.dataset.search||'';
-    const myTier=p.dataset.tier||'Poster';
-    const matchSearch=!q || t.includes(q);
-    const matchTier=(activeTier==='__all__') || (myTier===activeTier);
-    p.classList.toggle('hidden', !(matchSearch && matchTier));
-  });
-  const filtering = q || activeTier!=='__all__';
+let searchTimer=null;
+search.addEventListener('input', ()=>{
+  window.clearTimeout(searchTimer);
+  searchTimer=window.setTimeout(applyFilters, 120);
+});
 
-  // 三级 section 计数 + 隐藏空 + 更新对应 nav-subsub-list 链接
-  subsubSecs.forEach(s=>{
-    const visible=s.querySelectorAll('.paper:not(.hidden)').length;
-    s.classList.toggle('hidden', visible===0);
-    const link=document.querySelector('.nav-subsub-list a[href="#'+s.id+'"]');
-    if(link){
-      const cnt=link.querySelector('.count');
-      if(cnt) cnt.textContent='('+visible+')';
-      link.classList.toggle('hidden', visible===0);
-    }
-  });
-
-  // 二级 section
-  subSecs.forEach(s=>{
-    const visible=s.querySelectorAll('.paper:not(.hidden)').length;
-    s.classList.toggle('hidden', visible===0);
-    // nav 里二级有两种：肥桶 .nav-sub (含 head) 或瘦桶 .nav-thin
-    const navSub=document.getElementById('nav-'+s.id);
-    if(navSub){
-      const cnt=navSub.querySelector('.count');
-      if(cnt) cnt.textContent= navSub.classList.contains('nav-thin') ? '('+visible+')' : visible;
-      navSub.classList.toggle('hidden', visible===0);
-      if(filtering && visible>0 && navSub.classList.contains('nav-sub')) navSub.classList.add('expanded');
-      if(!filtering && navSub.classList.contains('nav-sub')) navSub.classList.remove('expanded');
-    }
-  });
-
-  // 一级 section
-  priSecs.forEach(s=>{
-    const visible=s.querySelectorAll('.paper:not(.hidden)').length;
-    s.classList.toggle('hidden', visible===0);
-    const prinav=document.getElementById('nav-'+s.id);
-    if(prinav){
-      const cnt=prinav.querySelector('.nav-pri-head .count');
-      if(cnt) cnt.textContent=visible;
-      prinav.classList.toggle('hidden', visible===0);
-      if(filtering && visible>0) prinav.classList.add('expanded');
-      if(!filtering) prinav.classList.remove('expanded');
-    }
-  });
-}
-
-search.addEventListener('input', applyFilters);
 tierChips.forEach(chip=>{
   chip.addEventListener('click', ()=>{
     activeTier = chip.dataset.tier;
@@ -276,6 +518,10 @@ tierChips.forEach(chip=>{
     applyFilters();
   });
 });
+
+window.addEventListener('scroll', renderNearViewport, {passive:true});
+const lazyScrollRoot=document.querySelector('.main');
+if(lazyScrollRoot) lazyScrollRoot.addEventListener('scroll', renderNearViewport, {passive:true});
 
 // 回到顶部
 const backTop = document.getElementById('back-to-top');
@@ -291,6 +537,9 @@ backTop.addEventListener('click', ()=>{
   window.scrollTo({top:0, behavior:'smooth'});
   if (mainEl) mainEl.scrollTo({top:0, behavior:'smooth'});
 });
+
+updateFavoriteCount();
+applyFilters();
 """
 
 
@@ -301,6 +550,34 @@ def _anchor(*parts):
 def _sort_named(items):
     """按 (是否"其他", -数量, 名字) 排序；items 是 [(name, count)] 列表"""
     return sorted(items, key=lambda kv: (kv[0] == "其他" or kv[0].startswith("其他"), -kv[1], kv[0]))
+
+
+def _paper_record(p, section_anchor, sub_anchor, pri_anchor):
+    authors = p.get("authors", []) or []
+    tier = (p.get("tier") or "Poster").strip()
+    search_blob = (
+        p["title"] + " " + " ".join(authors) + " "
+        + p.get("primary_area", "") + " " + p.get("category", "") + " "
+        + (p.get("subcategory") or "") + " " + tier + " "
+        + (p.get("icml_subtopic_en", "") or "")
+    ).lower()
+    return {
+        "id": str(p.get("id") or p.get("uid") or p.get("title")),
+        "title": p.get("title", ""),
+        "authors": authors,
+        "primary_area": p.get("primary_area", ""),
+        "category": p.get("category", ""),
+        "subcategory": p.get("subcategory") or "",
+        "tier": tier,
+        "url": p.get("url") or "",
+        "paper_url": p.get("paper_url") or "",
+        "abstract": p.get("abstract") or "",
+        "analysis": p.get("中文分析") or {},
+        "search": search_blob,
+        "section_anchor": section_anchor,
+        "sub_anchor": sub_anchor,
+        "pri_anchor": pri_anchor,
+    }
 
 
 def _render_paper(p):
@@ -505,6 +782,7 @@ def build():
 </div>""")
 
     # ============ 正文 ============
+    paper_records = []
     pri_secs = []
     for pa in primary_order:
         cats = grouped[pa]
@@ -521,11 +799,12 @@ def build():
             real_subcats = [k for k in subs if k != FLAT_KEY]
             if not real_subcats:
                 # 瘦桶：直接列论文
-                cards = "".join(_render_paper(p) for p in subs[FLAT_KEY])
+                for p in subs[FLAT_KEY]:
+                    paper_records.append(_paper_record(p, sub_anchor, sub_anchor, pa_anchor))
                 sub_secs.append(f"""
 <section id="{sub_anchor}" class="sub-sec">
   <h3 class="sub-title">{escape(cat)}<small>{ctot} 篇</small></h3>
-  {cards}
+  <div class="paper-list" data-section="{sub_anchor}"></div>
 </section>""")
             else:
                 # 肥桶：三级子 section
@@ -534,19 +813,21 @@ def build():
                 subsub_html = []
                 for s, sct in ss_items:
                     ss_anchor = "subsub-" + _anchor(pa, cat, s)
-                    cards = "".join(_render_paper(p) for p in subs[s])
+                    for p in subs[s]:
+                        paper_records.append(_paper_record(p, ss_anchor, sub_anchor, pa_anchor))
                     subsub_html.append(f"""
 <section id="{ss_anchor}" class="subsub-sec">
   <h4 class="subsub-title">{escape(s)}<small>{sct} 篇</small></h4>
-  {cards}
+  <div class="paper-list" data-section="{ss_anchor}"></div>
 </section>""")
                 if FLAT_KEY in subs:
                     ss_anchor = "subsub-" + _anchor(pa, cat, FLAT_KEY)
-                    cards = "".join(_render_paper(p) for p in subs[FLAT_KEY])
+                    for p in subs[FLAT_KEY]:
+                        paper_records.append(_paper_record(p, ss_anchor, sub_anchor, pa_anchor))
                     subsub_html.append(f"""
 <section id="{ss_anchor}" class="subsub-sec">
   <h4 class="subsub-title">(待分)<small>{len(subs[FLAT_KEY])} 篇</small></h4>
-  {cards}
+  <div class="paper-list" data-section="{ss_anchor}"></div>
 </section>""")
                 sub_secs.append(f"""
 <section id="{sub_anchor}" class="sub-sec">
@@ -559,6 +840,8 @@ def build():
   <h2 class="pri-title">{escape(pa)}<small>{pa_count} 篇 · {len(cat_items)} 个细分</small></h2>
   {''.join(sub_secs)}
 </section>""")
+
+    paper_data_json = json.dumps(paper_records, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
     # ============ HTML ============
     html = f"""<!DOCTYPE html>
@@ -605,7 +888,9 @@ def build():
         <span class="tier-chip all active" data-tier="__all__">📚 全部 {total} 篇</span>
         {f'<span class="tier-chip Oral" data-tier="Oral">🎤 Oral {n_oral} 篇</span>' if n_oral > 0 else ''}
         {f'<span class="tier-chip Spotlight" data-tier="Spotlight">⭐ Spotlight {n_spotlight} 篇</span>' if n_spotlight > 0 else ''}
+        <span class="tier-chip favorite" data-tier="__favorites__">★ 收藏 <b id="favorite-count">0</b> 篇</span>
       </div>
+      <div id="render-status" class="render-status"></div>
       <div class="info-notice">
         💡 <b>关于论文链接的说明：</b>
         <ul>
@@ -615,10 +900,12 @@ def build():
         </ul>
       </div>
     </div>
+    <div id="empty-state" class="empty hidden">没有匹配的论文。</div>
     {''.join(pri_secs)}
   </main>
 </div>
 <button id="back-to-top" aria-label="回到顶部" title="回到顶部">↑</button>
+<script id="paper-data" type="application/json">{paper_data_json}</script>
 <script>{JS}</script>
 </body>
 </html>
