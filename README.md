@@ -3,7 +3,7 @@
 > 大模型替你读完了 ICML 2026 全部 **6,567** 篇接收论文 🤯
 > 中文六维度导读 · **8 一级 / 76 二级 / 95 三级**目录 · ⭐ Spotlight 高亮
 
-🔗 **在线浏览**：<https://JenniferZhao0531.github.io/ICML2026-Guide-CN/>
+🔗 **在线浏览**：<https://tsrigo.github.io/ICML2026-Guide-CN/>
 
 ---
 
@@ -43,7 +43,7 @@
 ## 🚀 用法
 
 ### 直接看
-打开 [在线网页](https://JenniferZhao0531.github.io/ICML2026-Guide-CN/) 或本地的 `index.html`：
+打开 [在线网页](https://tsrigo.github.io/ICML2026-Guide-CN/) 或本地的 `index.html`：
 
 - **左侧三级导航**：点一级展开二级；点二级（带 ▶ 的肥桶）再展开三级；点叶子跳转
 - **顶部 chip**：一键筛选 `📚 全部 / ⭐ Spotlight 575 篇`
