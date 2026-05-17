@@ -212,6 +212,8 @@ const DIM_LABELS = [
 ];
 const INITIAL_PER_SECTION = 24;
 const BATCH_PER_SECTION = 24;
+const MAX_SECTIONS_PER_RENDER_PASS = 6;
+const MAX_CARDS_PER_RENDER_PASS = 144;
 const FAVORITE_KEY = 'icml2026-guide-cn:favorites:v1';
 
 const search=document.getElementById('search');
@@ -388,7 +390,7 @@ function clearRenderedPapers(){
   });
 }
 
-function renderSection(sectionId, amount=INITIAL_PER_SECTION){
+function appendPapers(sectionId, amount=BATCH_PER_SECTION){
   const list=paperLists.get(sectionId);
   if(!list || list.closest('.hidden')) return;
   const papers=filteredBySection.get(sectionId) || [];
@@ -412,26 +414,70 @@ function renderSection(sectionId, amount=INITIAL_PER_SECTION){
     const btn=document.createElement('button');
     btn.type='button';
     btn.textContent=`加载更多（剩余 ${papers.length - next} 篇）`;
-    btn.addEventListener('click', ()=>renderSection(sectionId, BATCH_PER_SECTION));
+    btn.addEventListener('click', ()=>appendPapers(sectionId, BATCH_PER_SECTION));
     more.appendChild(btn);
     list.appendChild(more);
   }
+  return next - rendered;
+}
+
+function renderInitialSection(sectionId){
+  const list=paperLists.get(sectionId);
+  if(!list || Number(list.dataset.rendered || 0) > 0) return 0;
+  return appendPapers(sectionId, INITIAL_PER_SECTION) || 0;
 }
 
 function renderNearViewport(){
-  let rendered=false;
+  const viewportTarget = Math.min(180, window.innerHeight * 0.25);
+  const candidates=[];
   paperLists.forEach(list=>{
-    if(rendered || list.closest('.hidden')) return;
-    const rect=list.getBoundingClientRect();
-    if(rect.top < window.innerHeight + 900 && rect.bottom > -400){
-      renderSection(list.dataset.section, INITIAL_PER_SECTION);
-      rendered=true;
+    if(list.closest('.hidden') || Number(list.dataset.rendered || 0) > 0) return;
+    const section=list.closest('section.subsub-sec, section.sub-sec') || list;
+    const rect=section.getBoundingClientRect();
+    if(rect.top < window.innerHeight + 900 && rect.bottom > -240){
+      candidates.push({
+        list,
+        distance: Math.abs(rect.top - viewportTarget),
+      });
     }
   });
-  if(!rendered){
-    const first=Array.from(paperLists.values()).find(list=>!list.closest('.hidden'));
-    if(first) renderSection(first.dataset.section, INITIAL_PER_SECTION);
+  candidates.sort((a,b)=>a.distance-b.distance);
+
+  let renderedSections=0;
+  let renderedCards=0;
+  for(const {list} of candidates){
+    const added=renderInitialSection(list.dataset.section);
+    if(added > 0){
+      renderedSections += 1;
+      renderedCards += added;
+    }
+    if(renderedSections >= MAX_SECTIONS_PER_RENDER_PASS || renderedCards >= MAX_CARDS_PER_RENDER_PASS) break;
   }
+
+  if(renderedSections === 0){
+    const first=Array.from(paperLists.values()).find(list=>!list.closest('.hidden') && Number(list.dataset.rendered || 0) === 0);
+    if(first) renderInitialSection(first.dataset.section);
+  }
+}
+
+let renderScheduled=false;
+function scheduleRenderNearViewport(){
+  if(renderScheduled) return;
+  renderScheduled=true;
+  requestAnimationFrame(()=>{
+    renderScheduled=false;
+    renderNearViewport();
+  });
+}
+
+function renderTargetNeighborhood(target){
+  if(!target) return;
+  const section=target.closest('section.subsub-sec, section.sub-sec, section.pri-sec') || target;
+  const lists=Array.from(section.querySelectorAll('.paper-list'))
+    .filter(list=>!list.closest('.hidden') && Number(list.dataset.rendered || 0) === 0)
+    .slice(0, MAX_SECTIONS_PER_RENDER_PASS);
+  lists.forEach(list=>renderInitialSection(list.dataset.section));
+  scheduleRenderNearViewport();
 }
 
 function updateNavAndSections(state){
@@ -486,7 +532,7 @@ function applyFilters(){
   const state=buildFilteredState();
   clearRenderedPapers();
   updateNavAndSections(state);
-  requestAnimationFrame(renderNearViewport);
+  scheduleRenderNearViewport();
 }
 
 // L1 折叠：点击大类头部展开/收起 L2 列表
@@ -505,6 +551,19 @@ document.querySelectorAll('.nav-sub-head').forEach(h=>{
   });
 });
 
+document.addEventListener('click', e=>{
+  const link=e.target.closest('a[href^="#"]');
+  if(!link) return;
+  const id=link.getAttribute('href').slice(1);
+  window.setTimeout(()=>renderTargetNeighborhood(document.getElementById(id)), 0);
+  window.setTimeout(scheduleRenderNearViewport, 80);
+});
+
+window.addEventListener('hashchange', ()=>{
+  const id=window.location.hash.slice(1);
+  window.setTimeout(()=>renderTargetNeighborhood(document.getElementById(id)), 0);
+});
+
 let searchTimer=null;
 search.addEventListener('input', ()=>{
   window.clearTimeout(searchTimer);
@@ -519,9 +578,9 @@ tierChips.forEach(chip=>{
   });
 });
 
-window.addEventListener('scroll', renderNearViewport, {passive:true});
+window.addEventListener('scroll', scheduleRenderNearViewport, {passive:true});
 const lazyScrollRoot=document.querySelector('.main');
-if(lazyScrollRoot) lazyScrollRoot.addEventListener('scroll', renderNearViewport, {passive:true});
+if(lazyScrollRoot) lazyScrollRoot.addEventListener('scroll', scheduleRenderNearViewport, {passive:true});
 
 // 回到顶部
 const backTop = document.getElementById('back-to-top');
